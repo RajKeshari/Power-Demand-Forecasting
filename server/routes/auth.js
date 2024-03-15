@@ -4,7 +4,6 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const nodemailer = require('nodemailer');
 const verifyToken = require('../middleware/authMiddleware');
 const { body, validationResult } = require('express-validator');
 
@@ -15,7 +14,8 @@ const transporter = require('../utils/transporter');
 router.post('/register', [
   body('email').isEmail(),
   body('password').isLength({ min: 5 }).isAlphanumeric(),
-  body('name').isLength({ min: 3 })
+  body('firstName').isLength({ min: 3 }),
+  body('lastName').isLength({ min: 3 })
 ],
   async (req, res) => {
     // Validate email domain
@@ -46,7 +46,7 @@ router.post('/register', [
     // Store OTP in the database with expiration time
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(req.body.password, salt);
-    const user = new User({ name: req.body.name, designantion: req.body.designantion, email: req.body.email, password: hashedPassword, otp, otpExpiresAt: Date.now() + 5 * 60 * 1000 }); // Expires in 5 minutes
+    const user = new User({ firstName: req.body.firstName, lastName: req.body.lastName, designantion: req.body.designantion, email: req.body.email, password: hashedPassword, otp, otpExpiresAt: Date.now() + 5 * 60 * 1000 }); // Expires in 5 minutes
     await user.save();
 
     // Send OTP email
@@ -55,7 +55,7 @@ router.post('/register', [
         from: 'Power@iitism.ac.in',
         to: user.email,
         subject: 'Your OTP for Verification',
-        text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
+        text: `${user.firstName + user.lastName}, your OTP is ${otp}. It will expire in 5 minutes.`,
         html: `<!DOCTYPE html>
             <html lang="en">
               <head>
@@ -129,7 +129,7 @@ router.post('/register', [
                             color: #1f1f1f;
                           "
                         >
-                          Your OTP
+                        ${user.firstName + user.lastName}, your OTP
                         </h1>
                         <p
                           style="
@@ -139,7 +139,7 @@ router.post('/register', [
                             font-weight: 500;
                           "
                         >
-                          Hey ${user.email},
+                          Hey ${user.firstName + user.lastName},
                         </p>
                         <p
                           style="
